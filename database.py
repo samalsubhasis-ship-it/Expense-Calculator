@@ -1,34 +1,32 @@
-import streamlit as st
+import os
 from pymongo import MongoClient
-from datetime import datetime
 
-# Initialize connection. Uses st.cache_resource to only connect once.
-@st.cache_resource
-def init_connection():
-    # Looks for a "mongo" dictionary inside your secrets management setup
-    mongo_uri = st.secrets["mongo"]["uri"]
-    return MongoClient(mongo_uri)
+# 1. Initialize variables globally
+client = None
+db = None
+expenses_collection = None
 
-try:
-    client = init_connection()
-    # Name your database "home_expenses"
-    db = client.home_expenses
-    # Collection for storing individual expense records
-    expenses_collection = db.expenses
-except Exception as e:
-    st.error(f"Error connecting to MongoDB: {e}")
+def init_db():
+    global client, db, expenses_collection
+    
+    # 2. Get the connection URI (e.g., from environment variables)
+    mongo_uri = os.getenv("MONGO_URI", "mongodb://localhost:27017/")
+    
+    try:
+        client = MongoClient(mongo_uri)
+        db = client["expense_tracker"] # Your database name
+        expenses_collection = db["expenses"] # Your collection name
+        print("Connected to MongoDB successfully.")
+    except Exception as e:
+        print(f"Failed to connect to MongoDB: {e}")
 
-def insert_expense(amount, category, description, date):
-    """Inserts an expense record into MongoDB."""
-    record = {
-        "amount": float(amount),
-        "category": category,
-        "description": description,
-        "date": datetime.combine(date, datetime.min.time()) # Keep it standard datetime format
-    }
-    return expenses_collection.insert_one(record)
+# 3. Ensure this runs when the module is imported
+init_db()
 
 def fetch_all_expenses():
-    """Retrieves all expenses from the database."""
-    # Convert cursor to list so it works seamlessly with Pandas DataFrames
+    # Defensive check to see if the connection actually works
+    if expenses_collection is None:
+        raise RuntimeError("Database collection 'expenses_collection' is not initialized. Check your connection setup.")
+        
     return list(expenses_collection.find())
+
