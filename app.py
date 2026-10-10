@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-from database import insert_expense, fetch_all_expenses
+from database import fetch_all_expenses, insert_expense
 from datetime import datetime
 
 # App Configuration
